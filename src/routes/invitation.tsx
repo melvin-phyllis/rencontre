@@ -365,6 +365,7 @@ function AskCard({
 
 const runawayButtonGap = 8;
 const runawayButtonSafeGap = 10;
+const runawayPointerDanger = 96;
 
 function RunawayButton({ theme }: { theme: ThemePreset }) {
   const [pos, setPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -388,12 +389,12 @@ function RunawayButton({ theme }: { theme: ThemePreset }) {
     const maxX = pw - bw - baseLeft;
     const minY = -top;
     const maxY = Math.max(0, ph - top - bh);
-    const danger = 74;
+    const farEnough = Math.min(Math.max(pw * 0.34, 150), 260);
 
     let next = pos;
-    let bestDistance = -1;
+    let bestScore = -Infinity;
 
-    for (let i = 0; i < 48; i += 1) {
+    for (let i = 0; i < 80; i += 1) {
       const candidate = {
         x: Math.random() * (maxX - minX) + minX,
         y: Math.random() * (maxY - minY) + minY,
@@ -405,6 +406,7 @@ function RunawayButton({ theme }: { theme: ThemePreset }) {
       const bottom = topEdge + bh;
       const centerX = left + bw / 2;
       const centerY = topEdge + bh / 2;
+      const movement = Math.hypot(candidate.x - pos.x, candidate.y - pos.y);
       const overlapsYes =
         yesRect &&
         left < yesRect.right + runawayButtonSafeGap &&
@@ -420,16 +422,24 @@ function RunawayButton({ theme }: { theme: ThemePreset }) {
       }
 
       const outsideDangerZone =
-        pointer.x < left - danger ||
-        pointer.x > left + bw + danger ||
-        pointer.y < topEdge - danger ||
-        pointer.y > topEdge + bh + danger;
+        pointer.x < left - runawayPointerDanger ||
+        pointer.x > left + bw + runawayPointerDanger ||
+        pointer.y < topEdge - runawayPointerDanger ||
+        pointer.y > topEdge + bh + runawayPointerDanger;
       const distance = Math.hypot(centerX - pointer.x, centerY - pointer.y);
+      const score = distance * 2 + movement + (outsideDangerZone ? farEnough : 0);
 
-      if (outsideDangerZone && distance > bestDistance) {
+      if (movement > 24 && score > bestScore) {
         next = candidate;
-        bestDistance = distance;
+        bestScore = score;
       }
+    }
+
+    if (pointer && bestScore === -Infinity) {
+      next = {
+        x: pointer.x < parentRect.left + pw / 2 ? maxX : minX,
+        y: pointer.y < parentRect.top + ph / 2 ? maxY : minY,
+      };
     }
 
     setPos(next);
@@ -438,10 +448,18 @@ function RunawayButton({ theme }: { theme: ThemePreset }) {
 
   const messages = [
     "Non 😅",
-    "Vraiment ? 🥺",
-    "Attends… 😢",
+    "Même pas 😌",
+    "Essaie encore 😇",
+    "Pas si vite 😜",
+    "Tu m'as raté 😌",
+    "Presque 😅",
+    "Tu es sûr(e) ? 🥺",
+    "Réfléchis encore 💭",
+    "Ça compte pas 🙈",
+    "Je bouge trop vite ✨",
     "Non non non 😭",
     "Réfléchis bien 💔",
+    "Dernière chance 😏",
     "Impossible 🙈",
     "Trop tard 😜",
   ];
@@ -457,10 +475,8 @@ function RunawayButton({ theme }: { theme: ThemePreset }) {
         if (e.pointerType !== "touch") dodge({ x: e.clientX, y: e.clientY });
       }}
       onPointerDown={(e) => {
-        if (e.pointerType === "touch") {
-          e.preventDefault();
-          dodge({ x: e.clientX, y: e.clientY });
-        }
+        e.preventDefault();
+        dodge({ x: e.clientX, y: e.clientY });
       }}
       onFocus={() => dodge()}
       onClick={(e) => {
